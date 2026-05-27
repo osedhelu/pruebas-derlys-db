@@ -1,10 +1,10 @@
 package com.derlys.repository;
 
-import java.security.Timestamp;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +33,7 @@ public class UsuarioRepository {
         }
     }
 
-    private Usuario createUsuario(Integer id, String nombre, String email, String passwordHash, Integer rolId,
+    public Usuario createUsuario(Integer id, String nombre, String email, String passwordHash, Integer rolId,
             LocalDateTime fechaCreacion) throws SQLException {
         String sql = "INSERT INTO usuarios (id, nombre, email, password_hash, rol_id, fecha_creacion) VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -42,13 +42,13 @@ public class UsuarioRepository {
             statement.setString(3, email);
             statement.setString(4, passwordHash);
             statement.setInt(5, rolId);
-            statement.setTimestamp(6, new Timestamp(fechaCreacion.toEpochSecond(ZoneOffset.UTC)));
+            statement.setTimestamp(6, Timestamp.valueOf(fechaCreacion));
+            
             statement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error al crear el usuario", e);
         }
         return new Usuario(id, nombre, email, passwordHash, rolId, fechaCreacion);
-
     }
 
     private Usuario mapRow(ResultSet rs) throws SQLException {
@@ -60,6 +60,5 @@ public class UsuarioRepository {
                 rs.getString("password_hash"),
                 rs.getInt("rol_id"),
                 fecha);
-
     }
 }

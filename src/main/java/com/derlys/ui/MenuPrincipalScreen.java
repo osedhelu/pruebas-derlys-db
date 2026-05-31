@@ -31,14 +31,15 @@ public class MenuPrincipalScreen extends JFrame {
             case 1 -> {
                 boton(botones, "Módulo Granja", this::abrirGranja);
                 boton(botones, "Módulo Ventas", this::abrirVentas);
-                boton(botones, "Módulo Clientes", () -> moduloPendiente("Clientes"));
+                boton(botones, "Módulo Clientes", this::abrirClientes);
                 boton(botones, "Reportes operativos", this::abrirReportes);
                 boton(botones, "Finanzas / Rentabilidad", this::abrirFinanzas);
+                boton(botones, "Saldos contables", this::abrirSaldosCuentas);
             }
             case 2 -> boton(botones, "Módulo Granja", this::abrirGranja);
             case 3 -> {
                 boton(botones, "Módulo Ventas", this::abrirVentas);
-                boton(botones, "Módulo Clientes", () -> moduloPendiente("Clientes"));
+                boton(botones, "Módulo Clientes", this::abrirClientes);
             }
             default -> botones.add(new JLabel("No tienes módulos asignados para tu rol."));
         }
@@ -63,6 +64,11 @@ public class MenuPrincipalScreen extends JFrame {
         new VentasScreen(usuario, conn, this).setVisible(true);
     }
 
+    private void abrirClientes() {
+        setVisible(false);
+        new ClientesScreen(conn, this).setVisible(true);
+    }
+
     private void abrirReportes() {
         setVisible(false);
         new ReporteLotesScreen(conn, this).setVisible(true);
@@ -71,6 +77,11 @@ public class MenuPrincipalScreen extends JFrame {
     private void abrirFinanzas() {
         setVisible(false);
         new ReporteFinancieroScreen(conn, this).setVisible(true);
+    }
+
+    private void abrirSaldosCuentas() {
+        setVisible(false);
+        new ReporteCuentasScreen(conn, this).setVisible(true);
     }
 
     private void moduloPendiente(String nombre) {

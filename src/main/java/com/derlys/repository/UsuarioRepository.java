@@ -13,10 +13,98 @@ import com.derlys.model.Usuario;
 
 public class UsuarioRepository {
 
+    public static final int ROL_CLIENTE = 4;
+
     private final Connection connection;
 
     public UsuarioRepository(Connection connection) {
         this.connection = connection;
+    }
+
+    public Usuario buscarPorId(int id) {
+        String sql = "SELECT * FROM usuarios WHERE id = ? AND rol_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, id);
+            statement.setInt(2, ROL_CLIENTE);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
+            }
+            return null;
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al buscar cliente", e);
+        }
+    }
+
+    public Usuario crearCliente(String nombre, String email, String password) {
+        String sql = "INSERT INTO usuarios (nombre, email, password_hash, rol_id) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement statement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, nombre);
+            statement.setString(2, email);
+            statement.setString(3, password);
+            statement.setInt(4, ROL_CLIENTE);
+            statement.executeUpdate();
+            try (ResultSet keys = statement.getGeneratedKeys()) {
+                if (keys.next()) {
+                    return buscarPorId(keys.getInt(1));
+                }
+            }
+            throw new RuntimeException("No se pudo crear el cliente");
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al crear cliente: " + e.getMessage(), e);
+        }
+    }
+
+    public void actualizarCliente(int id, String nombre, String email, String passwordNuevo) {
+        String sql = passwordNuevo == null || passwordNuevo.isBlank()
+                ? "UPDATE usuarios SET nombre = ?, email = ? WHERE id = ? AND rol_id = ?"
+                : "UPDATE usuarios SET nombre = ?, email = ?, password_hash = ? WHERE id = ? AND rol_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, nombre);
+            statement.setString(2, email);
+            if (passwordNuevo == null || passwordNuevo.isBlank()) {
+                statement.setInt(3, id);
+                statement.setInt(4, ROL_CLIENTE);
+            } else {
+                statement.setString(3, passwordNuevo);
+                statement.setInt(4, id);
+                statement.setInt(5, ROL_CLIENTE);
+            }
+            if (statement.executeUpdate() == 0) {
+                throw new RuntimeException("Cliente no encontrado");
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al actualizar cliente", e);
+        }
+    }
+
+    public void eliminarCliente(int id) {
+        if (tienePreventas(id)) {
+            throw new RuntimeException("No se puede eliminar: el cliente tiene preventas registradas.");
+        }
+        String sql = "DELETE FROM usuarios WHERE id = ? AND rol_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, id);
+            statement.setInt(2, ROL_CLIENTE);
+            if (statement.executeUpdate() == 0) {
+                throw new RuntimeException("Cliente no encontrado");
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al eliminar cliente", e);
+        }
+    }
+
+    private boolean tienePreventas(int clienteId) {
+        String sql = "SELECT COUNT(*) FROM preventas WHERE cliente_id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, clienteId);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al validar preventas del cliente", e);
+        }
     }
 
     public List<Usuario> listarClientes() {
@@ -79,7 +167,8 @@ public class UsuarioRepository {
     }
 
     private Usuario mapRow(ResultSet rs) throws SQLException {
-        var fecha = rs.getTimestamp("fecha_creacion").toLocalDateTime();
+        var ts = rs.getTimestamp("fecha_creacion");
+        LocalDateTime fecha = ts != null ? ts.toLocalDateTime() : null;
         return new Usuario(
                 rs.getInt("id"),
                 rs.getString("nombre"),

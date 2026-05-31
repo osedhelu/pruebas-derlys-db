@@ -31,7 +31,9 @@ public class MenuPrincipalScreen extends JFrame {
                 boton(botones, "Módulo Clientes", () -> moduloPendiente("Clientes"));
                 boton(botones, "Reportes", () -> JOptionPane.showMessageDialog(this, "Abriendo Reportes..."));
             }
-            case 2 -> boton(botones, "Módulo Granja", this::abrirGranja);
+            case 2 -> {
+                boton(botones, "Módulo Granja", this::abrirGranja);
+            }
             case 3 -> {
                 boton(botones, "Módulo Ventas", () -> moduloPendiente("Ventas"));
                 boton(botones, "Módulo Clientes", () -> moduloPendiente("Clientes"));

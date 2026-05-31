@@ -33,22 +33,16 @@ public class UsuarioRepository {
         }
     }
 
-    public Usuario buscar(String email) throws SQLException {
-        String sql = "select * from usuarios u where email like ?";
-        try (PreparedStatement statement = connection.prepareStatement(sql)){
-            statement.setString(1, "%" + email+"%");
+    public Usuario buscar(String emailONombre) throws SQLException {
+        String sql = "SELECT * FROM usuarios WHERE email like ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, emailONombre + "%");
             try (ResultSet resultSet = statement.executeQuery()) {
-
                 if (resultSet.next()) {
                     return mapRow(resultSet);
                 }
             }
-
             return null;
-            
-        } catch (SQLException e) {
-            
-            throw new RuntimeException("Error al consultar Usuario de Email: " + email, e);
         }
     }
 

@@ -1,5 +1,5 @@
 # App Swing Java (Maven + SQLite)
-.PHONY: dev build run test clean help
+.PHONY: dev build run test clean init-db help
 
 MAIN_CLASS  := com.derlys.App
 SQLITE_DB   ?= datos/pruebas.db
@@ -30,13 +30,24 @@ clean:
 datos:
 	@mkdir -p datos
 
+## Recrea la base de datos desde cero (datos/init_database.sql)
+init-db: datos
+	@if command -v sqlite3 >/dev/null 2>&1; then \
+		rm -f $(SQLITE_DB); \
+		sqlite3 $(SQLITE_DB) < datos/init_database.sql; \
+		echo "Base creada: $(SQLITE_DB)"; \
+	else \
+		python3 scripts/init_db.py; \
+	fi
+
 help:
 	@echo "Comandos:"
 	@echo "  make dev    - compila y ejecuta la app Swing"
 	@echo "  make build  - solo compila"
 	@echo "  make run    - ejecuta (sin compilar)"
 	@echo "  make test   - ejecuta tests"
-	@echo "  make clean  - limpia target y datos/"
+	@echo "  make clean   - limpia target y datos/"
+	@echo "  make init-db - recrea $(SQLITE_DB) desde cero"
 	@echo ""
 	@echo "Variables:"
 	@echo "  SQLITE_DB=$(SQLITE_DB)"

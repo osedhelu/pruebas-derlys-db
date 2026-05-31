@@ -34,8 +34,10 @@ nbdist/
 .DS_Store
 Thumbs.db
 
-# Base de datos local (generada en runtime)
-datos/
+# Base de datos local (generada en runtime; scripts SQL sí se versionan)
+datos/*
+!datos/*.sql
+!datos/migrations/
 *.db
 *.db-journal
 *.db-wal

@@ -1,11 +1,14 @@
-# App de terminal Java (Maven + SQLite)
+# App Swing Java (Maven + SQLite)
 .PHONY: dev build run test clean help
 
 MAIN_CLASS  := com.derlys.App
 SQLITE_DB   ?= datos/pruebas.db
 MVN         := mvn -q
+# La terminal integrada de Cursor/VS Code no hereda DISPLAY; Xwayland suele usar :0
+DISPLAY     ?= :0
+export DISPLAY
 
-## Compila y ejecuta la app (modo desarrollo)
+## Compila y ejecuta la app Swing (modo desarrollo)
 dev: datos
 	$(MVN) compile exec:java -Dexec.mainClass=$(MAIN_CLASS)
 
@@ -29,7 +32,7 @@ datos:
 
 help:
 	@echo "Comandos:"
-	@echo "  make dev    - compila y ejecuta la app de terminal"
+	@echo "  make dev    - compila y ejecuta la app Swing"
 	@echo "  make build  - solo compila"
 	@echo "  make run    - ejecuta (sin compilar)"
 	@echo "  make test   - ejecuta tests"

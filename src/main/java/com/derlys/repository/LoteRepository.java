@@ -1,6 +1,7 @@
 package com.derlys.repository;
 
 import com.derlys.model.Lote;
+import com.derlys.model.LoteReporte;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -12,6 +13,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class LoteRepository {
+
+    private static final int DIAS_META_SACRIFICIO = 45;
+    private static final String SQL_REPORTE_DETALLADO = """
+            SELECT
+                l.id,
+                l.codigo_lote,
+                l.cantidad_inicial,
+                l.fecha_entrada,
+                CAST(julianday('now') - julianday(l.fecha_entrada) AS INTEGER) AS dias_vida,
+                (? - CAST(julianday('now') - julianday(l.fecha_entrada) AS INTEGER)) AS dias_para_sacrificio,
+                (SELECT IFNULL(SUM(cantidad_unidades), 0) FROM transacciones WHERE lote_id = l.id) AS total_salidas,
+                (SELECT IFNULL(SUM(cantidad_apartada), 0) FROM preventas WHERE lote_id = l.id AND estado = 'pendiente') AS total_apartado,
+                (l.cantidad_inicial
+                    - (SELECT IFNULL(SUM(cantidad_unidades), 0) FROM transacciones WHERE lote_id = l.id)
+                    - (SELECT IFNULL(SUM(cantidad_apartada), 0) FROM preventas WHERE lote_id = l.id AND estado = 'pendiente')
+                ) AS disponible_venta
+            FROM lotes l
+            """;
 
     private final Connection connection;
 
@@ -32,6 +51,50 @@ public class LoteRepository {
         } catch (SQLException e) {
             throw new RuntimeException("Error al listar los lotes", e);
         }
+    }
+
+    public List<LoteReporte> listarReporteDetallado() {
+        String sql = SQL_REPORTE_DETALLADO + " ORDER BY l.id ASC";
+        return ejecutarReporte(sql, null);
+    }
+
+    public LoteReporte obtenerReporteDetallado(int loteId) {
+        String sql = SQL_REPORTE_DETALLADO + " WHERE l.id = ?";
+        List<LoteReporte> filas = ejecutarReporte(sql, loteId);
+        return filas.isEmpty() ? null : filas.get(0);
+    }
+
+    private List<LoteReporte> ejecutarReporte(String sql, Integer loteId) {
+        List<LoteReporte> reportes = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, DIAS_META_SACRIFICIO);
+            if (loteId != null) {
+                statement.setInt(2, loteId);
+            }
+            try (ResultSet rs = statement.executeQuery()) {
+                while (rs.next()) {
+                    reportes.add(mapReporteRow(rs));
+                }
+            }
+            return reportes;
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al generar reporte de lotes", e);
+        }
+    }
+
+    private LoteReporte mapReporteRow(ResultSet rs) throws SQLException {
+        String fechaStr = rs.getString("fecha_entrada");
+        LocalDate fecha = fechaStr != null ? LocalDate.parse(fechaStr) : null;
+        return new LoteReporte(
+                rs.getInt("id"),
+                rs.getString("codigo_lote"),
+                rs.getInt("cantidad_inicial"),
+                fecha,
+                rs.getInt("dias_vida"),
+                rs.getInt("dias_para_sacrificio"),
+                rs.getInt("total_salidas"),
+                rs.getInt("total_apartado"),
+                rs.getInt("disponible_venta"));
     }
 
     public Lote obtenerUnLote(Integer id) {

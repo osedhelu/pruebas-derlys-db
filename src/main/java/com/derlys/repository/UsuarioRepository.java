@@ -19,6 +19,20 @@ public class UsuarioRepository {
         this.connection = connection;
     }
 
+    public List<Usuario> listarClientes() {
+        String sql = "SELECT * FROM usuarios WHERE rol_id = 4 ORDER BY nombre ASC";
+        List<Usuario> clientes = new ArrayList<>();
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+                ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                clientes.add(mapRow(resultSet));
+            }
+            return clientes;
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al listar clientes", e);
+        }
+    }
+
     public List<Usuario> findAll() throws SQLException {
         String sql = "SELECT * FROM usuarios ORDER BY id ASC";
         List<Usuario> usuarios = new ArrayList<>();

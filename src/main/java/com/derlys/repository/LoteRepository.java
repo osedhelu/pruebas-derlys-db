@@ -59,24 +59,24 @@ public Lote crearLote(Integer totalPollotes, String raza) {
     String sqlCount = "SELECT COUNT(*) + 1 FROM lotes";
 
     try {
-        // 1. Conseguimos el número para el código secuencial
+        
         int siguienteNumero = 1;
         try (PreparedStatement stmtCount = connection.prepareStatement(sqlCount);
              ResultSet rs = stmtCount.executeQuery()) {
             if (rs.next()) siguienteNumero = rs.getInt(1);
         }
 
-        // 2. Preparamos los datos por defecto para el record
+        
         String codigoLote = "LT-" + siguienteNumero;
         java.time.LocalDate fechaActual = java.time.LocalDate.now();
         String razaFinal = (raza == null || raza.isEmpty()) ? "Ross 308" : raza;
-        String estadoInicial = "ACTIVO"; // Todo lote nuevo inicia activo
+        String estadoInicial = "ACTIVO"; 
         String observacionesIniciales = "Lote creado exitosamente.";
 
-        // 3. Insertamos en la base de datos
+        
             try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, codigoLote);
-            stmt.setString(2, fechaActual.toString()); // Guarda "YYYY-MM-DD"
+            stmt.setString(2, fechaActual.toString()); 
             stmt.setInt(3, totalPollotes);
             stmt.setString(4, razaFinal);
             stmt.setString(5, estadoInicial);
@@ -84,11 +84,11 @@ public Lote crearLote(Integer totalPollotes, String raza) {
             
             stmt.executeUpdate();
 
-            // 4. Recuperamos el ID autogenerado y retornamos tu Record completo
+            
             try (ResultSet keys = stmt.getGeneratedKeys()) {
                 if (keys.next()) {
                     return new Lote(
-                        keys.getInt(1), // El ID que generó SQLite (Integer)
+                        keys.getInt(1), 
                         codigoLote,
                         fechaActual,
                         totalPollotes,

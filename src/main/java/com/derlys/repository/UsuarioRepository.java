@@ -33,6 +33,25 @@ public class UsuarioRepository {
         }
     }
 
+    public Usuario buscar(String email) throws SQLException {
+        String sql = "select * from usuarios u where email like ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)){
+            statement.setString(1, "%" + email+"%");
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                if (resultSet.next()) {
+                    return mapRow(resultSet);
+                }
+            }
+
+            return null;
+            
+        } catch (SQLException e) {
+            
+            throw new RuntimeException("Error al consultar Usuario de Email: " + email, e);
+        }
+    }
+
     public Usuario createUsuario(Integer id, String nombre, String email, String passwordHash, Integer rolId,
             LocalDateTime fechaCreacion) throws SQLException {
         String sql = "INSERT INTO usuarios (id, nombre, email, password_hash, rol_id, fecha_creacion) VALUES (?, ?, ?, ?, ?, ?)";
@@ -43,7 +62,7 @@ public class UsuarioRepository {
             statement.setString(4, passwordHash);
             statement.setInt(5, rolId);
             statement.setTimestamp(6, Timestamp.valueOf(fechaCreacion));
-            
+
             statement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error al crear el usuario", e);

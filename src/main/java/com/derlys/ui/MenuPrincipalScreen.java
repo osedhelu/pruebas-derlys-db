@@ -3,6 +3,7 @@ package com.derlys.ui;
 import com.derlys.model.Usuario;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.sql.Connection;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -12,9 +13,11 @@ import javax.swing.JPanel;
 public class MenuPrincipalScreen extends JFrame {
 
     private final Usuario usuario;
+    private final Connection conn;
 
-    public MenuPrincipalScreen(Usuario usuario) {
+    public MenuPrincipalScreen(Usuario usuario, Connection conn) {
         this.usuario = usuario;
+        this.conn = conn;
 
         setTitle("El Buen Pollo - " + usuario.nombre());
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -31,9 +34,7 @@ public class MenuPrincipalScreen extends JFrame {
                 boton(botones, "Módulo Clientes", () -> moduloPendiente("Clientes"));
                 boton(botones, "Reportes", () -> JOptionPane.showMessageDialog(this, "Abriendo Reportes..."));
             }
-            case 2 -> {
-                boton(botones, "Módulo Granja", this::abrirGranja);
-            }
+            case 2 -> boton(botones, "Módulo Granja", this::abrirGranja);
             case 3 -> {
                 boton(botones, "Módulo Ventas", () -> moduloPendiente("Ventas"));
                 boton(botones, "Módulo Clientes", () -> moduloPendiente("Clientes"));
@@ -52,7 +53,8 @@ public class MenuPrincipalScreen extends JFrame {
     }
 
     private void abrirGranja() {
-        new GranjaScreen(usuario).setVisible(true);
+        setVisible(false);
+        new GranjaScreen(usuario, conn, this).setVisible(true);
     }
 
     private void moduloPendiente(String nombre) {

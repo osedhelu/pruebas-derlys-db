@@ -17,11 +17,13 @@ import javax.swing.border.EmptyBorder;
 
 public class LoginScreen extends JFrame {
 
+    private final Connection conn;
     private final AuthRepository authRepo;
     private final JTextField campoUsuario = new JTextField(20);
     private final JPasswordField campoContrasena = new JPasswordField(20);
 
     public LoginScreen(Connection conn) {
+        this.conn = conn;
         authRepo = new AuthRepository(conn);
 
         setTitle("Iniciar Sesión - Granja Derlys");
@@ -59,7 +61,7 @@ public class LoginScreen extends JFrame {
         try {
             Usuario user = authRepo.login(usuario, contrasena);
             dispose();
-            new MenuPrincipalScreen(user).setVisible(true);
+            new MenuPrincipalScreen(user, conn).setVisible(true);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             campoContrasena.setText("");

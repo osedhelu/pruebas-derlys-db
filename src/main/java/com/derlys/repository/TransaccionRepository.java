@@ -80,36 +80,11 @@ public class TransaccionRepository {
     public void crear(
             int loteId, int usuarioId, String tipoNombre, int tipoMovimientoId, int cantidad, String descripcion,
             Double monto) {
-        String sql = """
-                INSERT INTO transacciones (descripcion, lote_id, usuario_id, tipo_movimiento_id, cantidad_unidades)
-                VALUES (?, ?, ?, ?, ?)
-                """;
         boolean autoCommit = true;
         try {
             autoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
-
-            int transaccionId;
-            try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                statement.setString(1, descripcion);
-                statement.setInt(2, loteId);
-                statement.setInt(3, usuarioId);
-                statement.setInt(4, tipoMovimientoId);
-                statement.setInt(5, cantidad);
-                statement.executeUpdate();
-
-                try (ResultSet keys = statement.getGeneratedKeys()) {
-                    if (!keys.next()) {
-                        throw new SQLException("No se obtuvo el ID de la transacción");
-                    }
-                    transaccionId = keys.getInt(1);
-                }
-            }
-
-            if (monto != null && monto > 0) {
-                registrarAsientos(transaccionId, tipoNombre, monto);
-            }
-
+            insertarTransaccion(loteId, usuarioId, tipoNombre, tipoMovimientoId, cantidad, descripcion, monto);
             connection.commit();
         } catch (SQLException e) {
             try {
@@ -124,6 +99,35 @@ public class TransaccionRepository {
             } catch (SQLException ignored) {
                 // sin acción
             }
+        }
+    }
+
+    void insertarTransaccion(
+            int loteId, int usuarioId, String tipoNombre, int tipoMovimientoId, int cantidad, String descripcion,
+            Double monto) throws SQLException {
+        String sql = """
+                INSERT INTO transacciones (descripcion, lote_id, usuario_id, tipo_movimiento_id, cantidad_unidades)
+                VALUES (?, ?, ?, ?, ?)
+                """;
+        int transaccionId;
+        try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, descripcion);
+            statement.setInt(2, loteId);
+            statement.setInt(3, usuarioId);
+            statement.setInt(4, tipoMovimientoId);
+            statement.setInt(5, cantidad);
+            statement.executeUpdate();
+
+            try (ResultSet keys = statement.getGeneratedKeys()) {
+                if (!keys.next()) {
+                    throw new SQLException("No se obtuvo el ID de la transacción");
+                }
+                transaccionId = keys.getInt(1);
+            }
+        }
+
+        if (monto != null && monto > 0) {
+            registrarAsientos(transaccionId, tipoNombre, monto);
         }
     }
 

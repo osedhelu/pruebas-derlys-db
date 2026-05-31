@@ -35,6 +35,7 @@ public class MenuPrincipalScreen extends JFrame {
                 boton(botones, "Reportes operativos", this::abrirReportes);
                 boton(botones, "Finanzas / Rentabilidad", this::abrirFinanzas);
                 boton(botones, "Saldos contables", this::abrirSaldosCuentas);
+                boton(botones, "Historial por lote", this::abrirHistorialLote);
             }
             case 2 -> boton(botones, "Módulo Granja", this::abrirGranja);
             case 3 -> {
@@ -82,6 +83,11 @@ public class MenuPrincipalScreen extends JFrame {
     private void abrirSaldosCuentas() {
         setVisible(false);
         new ReporteCuentasScreen(conn, this).setVisible(true);
+    }
+
+    private void abrirHistorialLote() {
+        setVisible(false);
+        new HistorialLoteScreen(conn, this).setVisible(true);
     }
 
     private void moduloPendiente(String nombre) {

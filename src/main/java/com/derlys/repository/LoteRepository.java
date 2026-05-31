@@ -24,10 +24,10 @@ public class LoteRepository {
                 CAST(julianday('now') - julianday(l.fecha_entrada) AS INTEGER) AS dias_vida,
                 (? - CAST(julianday('now') - julianday(l.fecha_entrada) AS INTEGER)) AS dias_para_sacrificio,
                 (SELECT IFNULL(SUM(cantidad_unidades), 0) FROM transacciones WHERE lote_id = l.id) AS total_salidas,
-                (SELECT IFNULL(SUM(cantidad_apartada), 0) FROM preventas WHERE lote_id = l.id AND estado = 'pendiente') AS total_apartado,
+                (SELECT IFNULL(SUM(cantidad_apartada), 0) FROM preventas WHERE lote_id = l.id AND estado IN ('pendiente', 'listo', 'mora')) AS total_apartado,
                 (l.cantidad_inicial
                     - (SELECT IFNULL(SUM(cantidad_unidades), 0) FROM transacciones WHERE lote_id = l.id)
-                    - (SELECT IFNULL(SUM(cantidad_apartada), 0) FROM preventas WHERE lote_id = l.id AND estado = 'pendiente')
+                    - (SELECT IFNULL(SUM(cantidad_apartada), 0) FROM preventas WHERE lote_id = l.id AND estado IN ('pendiente', 'listo', 'mora'))
                 ) AS disponible_venta
             FROM lotes l
             """;

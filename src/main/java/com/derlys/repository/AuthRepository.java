@@ -13,10 +13,10 @@ public class AuthRepository extends UsuarioRepository {
 
     }
 
-    public Usuario login(String emailONombre, String contrasena) throws SQLException {
-        Usuario user = buscar(emailONombre);
+    public Usuario login(String username, String contrasena) throws SQLException {
+        Usuario user = buscar(username);
         if (user == null) {
-            throw new RuntimeException("Usuario no encontrado: " + emailONombre);
+            throw new RuntimeException("Usuario no encontrado: " + username);
         }
         String guardada = user.passwordHash();
         if (guardada == null || !guardada.equals(contrasena)) {

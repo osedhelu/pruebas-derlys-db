@@ -32,7 +32,7 @@ public class LoginScreen extends JFrame {
 
         JPanel form = new JPanel(new GridLayout(2, 2, 8, 8));
         form.setBorder(new EmptyBorder(16, 16, 8, 16));
-        form.add(new JLabel("Usuario o email:"));
+        form.add(new JLabel("Usuario:"));
         form.add(campoUsuario);
         form.add(new JLabel("Contraseña:"));
         form.add(campoContrasena);

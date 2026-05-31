@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public record PreventaDetalle(
         Integer id,
         String clienteNombre,
+        String clienteTelefono,
         String codigoLote,
         Integer cantidadApartada,
         LocalDateTime fechaApartado,

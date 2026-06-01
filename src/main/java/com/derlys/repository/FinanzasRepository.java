@@ -21,7 +21,7 @@ public class FinanzasRepository {
                     INNER JOIN plan_cuentas pc ON pc.id = ac.cuenta_id
                     WHERE t.lote_id = l.id AND pc.naturaleza = 'credito' AND ac.haber > 0
                 ), 0) AS ingresos,
-                COALESCE((
+                COALESCE(l.costo_inicial, 0) + COALESCE((
                     SELECT SUM(ac.debe)
                     FROM transacciones t
                     INNER JOIN asientos_contables ac ON ac.transaccion_id = t.id

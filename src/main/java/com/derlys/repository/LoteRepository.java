@@ -15,6 +15,12 @@ import java.util.List;
 public class LoteRepository {
 
     private static final int DIAS_META_SACRIFICIO = 45;
+    private static final String SQL_SALIDAS_FISICAS = """
+            (SELECT IFNULL(SUM(t.cantidad_unidades), 0)
+             FROM transacciones t
+             INNER JOIN tipos_movimiento tm ON tm.id = t.tipo_movimiento_id
+             WHERE t.lote_id = l.id AND tm.nombre IN ('VENTA', 'MUERTE'))
+            """;
     private static final String SQL_REPORTE_DETALLADO = """
             SELECT
                 l.id,
@@ -23,10 +29,15 @@ public class LoteRepository {
                 l.fecha_entrada,
                 CAST(julianday('now') - julianday(l.fecha_entrada) AS INTEGER) AS dias_vida,
                 (? - CAST(julianday('now') - julianday(l.fecha_entrada) AS INTEGER)) AS dias_para_sacrificio,
-                (SELECT IFNULL(SUM(cantidad_unidades), 0) FROM transacciones WHERE lote_id = l.id) AS total_salidas,
+            """
+            + SQL_SALIDAS_FISICAS
+            + """
+             AS total_salidas,
                 (SELECT IFNULL(SUM(cantidad_apartada), 0) FROM preventas WHERE lote_id = l.id AND estado IN ('pendiente', 'listo', 'mora')) AS total_apartado,
                 (l.cantidad_inicial
-                    - (SELECT IFNULL(SUM(cantidad_unidades), 0) FROM transacciones WHERE lote_id = l.id)
+                    - """
+            + SQL_SALIDAS_FISICAS
+            + """
                     - (SELECT IFNULL(SUM(cantidad_apartada), 0) FROM preventas WHERE lote_id = l.id AND estado IN ('pendiente', 'listo', 'mora'))
                 ) AS disponible_venta
             FROM lotes l
@@ -39,8 +50,8 @@ public class LoteRepository {
     }
 
     public List<Lote> listar() {
-        String sql = "SELECT * FROM lotes";
-        List<Lote> lote = new ArrayList();
+        String sql = "SELECT * FROM lotes ORDER BY id DESC";
+        List<Lote> lote = new ArrayList<>();
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             ResultSet resultSet = statement.executeQuery();
             while (resultSet.next()) {
@@ -118,11 +129,23 @@ public class LoteRepository {
         }
     }
 
-    public Lote crearLote(int cantidad, String raza) {
-        String sql = "INSERT INTO lotes (codigo_lote, fecha_entrada, cantidad_inicial, raza, estado, observaciones) VALUES (?, ?, ?, ?, ?, ?)";
+    public Lote crearLote(int cantidad, String raza, double costoInicial, int usuarioGranjaId) {
+        if (costoInicial <= 0) {
+            throw new RuntimeException("El costo total del lote debe ser mayor que 0.");
+        }
+
+        String sql =
+                """
+                INSERT INTO lotes (codigo_lote, fecha_entrada, cantidad_inicial, raza, estado, observaciones, costo_inicial)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """;
         String sqlCount = "SELECT COUNT(*) + 1 FROM lotes";
 
+        boolean autoCommit = true;
         try {
+            autoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
             int siguienteNumero = 1;
             try (PreparedStatement stmtCount = connection.prepareStatement(sqlCount);
                     ResultSet rs = stmtCount.executeQuery()) {
@@ -137,6 +160,7 @@ public class LoteRepository {
             String estadoInicial = "activo";
             String observaciones = "Lote creado desde la app.";
 
+            int loteId;
             try (PreparedStatement stmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, codigoLote);
                 stmt.setString(2, fechaActual.toString());
@@ -144,22 +168,60 @@ public class LoteRepository {
                 stmt.setString(4, razaFinal);
                 stmt.setString(5, estadoInicial);
                 stmt.setString(6, observaciones);
+                stmt.setDouble(7, costoInicial);
                 stmt.executeUpdate();
 
                 try (ResultSet keys = stmt.getGeneratedKeys()) {
-                    if (keys.next()) {
-                        Lote creado = obtenerUnLote(keys.getInt(1));
-                        if (creado != null) {
-                            return creado;
-                        }
+                    if (!keys.next()) {
+                        throw new SQLException("No se obtuvo el ID del lote");
                     }
+                    loteId = keys.getInt(1);
                 }
             }
 
+            int tipoCompraLoteId = idTipoMovimientoCompraLote();
+            String descCompra = "Compra inicial lote " + codigoLote + " — " + cantidad + " pollos";
+            new TransaccionRepository(connection).insertarTransaccion(
+                    loteId,
+                    usuarioGranjaId,
+                    "COMPRA_LOTE",
+                    tipoCompraLoteId,
+                    cantidad,
+                    descCompra,
+                    costoInicial);
+
+            connection.commit();
+
+            Lote creado = obtenerUnLote(loteId);
+            if (creado != null) {
+                return creado;
+            }
             return buscarPorCodigo(codigoLote);
         } catch (SQLException e) {
+            try {
+                connection.rollback();
+            } catch (SQLException ignored) {
+                // sin acción
+            }
             throw new RuntimeException("Error al crear el lote: " + e.getMessage(), e);
+        } finally {
+            try {
+                connection.setAutoCommit(autoCommit);
+            } catch (SQLException ignored) {
+                // sin acción
+            }
         }
+    }
+
+    private int idTipoMovimientoCompraLote() throws SQLException {
+        String sql = "SELECT id FROM tipos_movimiento WHERE nombre = 'COMPRA_LOTE'";
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+                ResultSet rs = statement.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+        }
+        throw new SQLException("Tipo de movimiento COMPRA_LOTE no configurado. Reinicie la app para migrar la BD.");
     }
 
     private Lote buscarPorCodigo(String codigoLote) throws SQLException {
@@ -174,9 +236,14 @@ public class LoteRepository {
         }
         return null;
     }
+
     private Lote mapRow(ResultSet rs) throws SQLException {
         String fechaStr = rs.getString("fecha_entrada");
         LocalDate fecha = (fechaStr != null) ? LocalDate.parse(fechaStr) : null;
+        double costo = rs.getDouble("costo_inicial");
+        if (rs.wasNull()) {
+            costo = 0;
+        }
         return new Lote(
                 rs.getInt("id"),
                 rs.getString("codigo_lote"),
@@ -184,8 +251,7 @@ public class LoteRepository {
                 rs.getInt("cantidad_inicial"),
                 rs.getString("raza"),
                 rs.getString("estado"),
-                rs.getString("observaciones")
-        );
+                rs.getString("observaciones"),
+                costo);
     }
-
 }

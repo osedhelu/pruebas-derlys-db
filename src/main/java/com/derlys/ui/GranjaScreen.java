@@ -28,6 +28,7 @@ public class GranjaScreen extends JFrame {
     private final DefaultTableModel tablaModelo;
     private final JTextField campoCantidad = new JTextField(8);
     private final JTextField campoRaza = new JTextField(12);
+    private final JTextField campoCostoInicial = new JTextField(12);
 
     public GranjaScreen(Usuario usuario, Connection conn, JFrame menuPrincipal) {
         this.usuario = usuario;
@@ -36,7 +37,7 @@ public class GranjaScreen extends JFrame {
         loteRepo = new LoteRepository(conn);
 
         setTitle("Granja - " + usuario.nombre());
-        setSize(750, 450);
+        setSize(820, 480);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(8, 8));
@@ -51,7 +52,7 @@ public class GranjaScreen extends JFrame {
         cabecera.add(btnVolverMenu, BorderLayout.EAST);
         add(cabecera, BorderLayout.NORTH);
 
-        String[] columnas = {"ID", "Código", "Fecha", "Cantidad", "Raza", "Estado"};
+        String[] columnas = {"ID", "Código", "Fecha", "Cantidad", "Costo ($)", "Raza", "Estado"};
         tablaModelo = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -61,10 +62,12 @@ public class GranjaScreen extends JFrame {
         tabla = new JTable(tablaModelo);
         add(new JScrollPane(tabla), BorderLayout.CENTER);
 
-        JPanel form = new JPanel(new GridLayout(2, 2, 8, 8));
+        JPanel form = new JPanel(new GridLayout(3, 2, 8, 8));
         form.setBorder(new EmptyBorder(8, 12, 4, 12));
         form.add(new JLabel("Cantidad de pollos:"));
         form.add(campoCantidad);
+        form.add(new JLabel("Costo total del lote ($):"));
+        form.add(campoCostoInicial);
         form.add(new JLabel("Raza (opcional):"));
         campoRaza.setText("Ross 308");
         form.add(campoRaza);
@@ -129,6 +132,7 @@ public class GranjaScreen extends JFrame {
                 lote.codigoLote(),
                 lote.fechaEntrada(),
                 lote.cantidadInicial(),
+                lote.costoInicial() > 0 ? lote.costoInicial() : "—",
                 lote.raza(),
                 lote.estado()
             });
@@ -138,23 +142,32 @@ public class GranjaScreen extends JFrame {
     private void crearLote() {
         try {
             int cantidad = Integer.parseInt(campoCantidad.getText().trim());
+            double costo = Double.parseDouble(campoCostoInicial.getText().trim());
             if (cantidad <= 0) {
                 JOptionPane.showMessageDialog(this, "La cantidad debe ser mayor que 0.");
                 return;
             }
+            if (costo <= 0) {
+                JOptionPane.showMessageDialog(this, "Indica el costo total pagado por el lote (debe ser mayor que 0).");
+                return;
+            }
 
-            Lote creado = loteRepo.crearLote(cantidad, campoRaza.getText());
+            Lote creado = loteRepo.crearLote(cantidad, campoRaza.getText(), costo, usuario.id());
             if (creado == null) {
                 JOptionPane.showMessageDialog(this, "No se pudo crear el lote.");
                 return;
             }
 
             campoCantidad.setText("");
+            campoCostoInicial.setText("");
             cargarLotes();
             JOptionPane.showMessageDialog(
-                    this, "Lote creado: " + creado.codigoLote(), "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    this,
+                    "Lote creado: " + creado.codigoLote() + "\nCosto registrado: $" + costo,
+                    "Éxito",
+                    JOptionPane.INFORMATION_MESSAGE);
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Escribe un número válido en cantidad.");
+            JOptionPane.showMessageDialog(this, "Cantidad o costo inválido. Usa números, ej: 1500000");
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }

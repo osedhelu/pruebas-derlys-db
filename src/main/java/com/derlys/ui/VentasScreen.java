@@ -270,13 +270,9 @@ public class VentasScreen extends JFrame {
                 "#%d | %s | Tel: %s | Estado actual: %s",
                 p.id(), p.clienteNombre(), textoTelefono(p), PreventaEstados.etiqueta(p.estado())));
 
-        if (PreventaEstados.COMPLETADA.equals(estado)) {
+        if (PreventaEstados.estaCobrada(estado)) {
             seleccionarEstadoEnCombo(PreventaEstados.ENTREGADO);
             btnCambiarEstado.setEnabled(true);
-            return;
-        }
-        if (PreventaEstados.ENTREGADO.equals(estado)) {
-            btnCambiarEstado.setEnabled(false);
             return;
         }
         seleccionarEstadoEnCombo(estado);
@@ -516,7 +512,9 @@ public class VentasScreen extends JFrame {
                     this,
                     "Preventa cobrada.\n"
                             + "Estado: Cobrada\n"
-                            + "Puedes marcar «Entregado» en la pestaña Cambiar estado.\n"
+                            + (PreventaEstados.ENTREGADO.equalsIgnoreCase(p.estado())
+                                    ? "Los pollos ya estaban entregados.\n"
+                                    : "Puedes marcar «Entregado» en Cambiar estado si aún no se entregaron.\n")
                             + "Venta registrada por "
                             + p.cantidadApartada()
                             + " pollos.");

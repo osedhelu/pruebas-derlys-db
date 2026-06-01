@@ -41,7 +41,7 @@ public class ReporteLotesScreen extends JFrame {
             "Fecha entrada",
             "Días de vida",
             "Días p/ sacrificio",
-            "Salidas",
+            "Ventas/muertes",
             "Apartados",
             "Disponible venta"
         };

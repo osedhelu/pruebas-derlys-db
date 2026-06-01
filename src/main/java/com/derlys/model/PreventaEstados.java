@@ -28,7 +28,7 @@ public final class PreventaEstados {
             case LISTO -> "Listo (avisar cliente)";
             case MORA -> "En mora";
             case COMPLETADA -> "Cobrada";
-            case ENTREGADO -> "Entregado";
+            case ENTREGADO -> "Entregado (sin cobrar)";
             default -> estado;
         };
     }
@@ -37,11 +37,16 @@ public final class PreventaEstados {
         return estado != null && RESERVA_STOCK.contains(estado.toLowerCase());
     }
 
+    /** Preventas a las que aún se les puede registrar el pago (cobrar). */
     public static boolean puedeCobrarse(String estado) {
         if (estado == null) {
             return false;
         }
         String e = estado.toLowerCase();
-        return PENDIENTE.equals(e) || LISTO.equals(e) || MORA.equals(e);
+        return PENDIENTE.equals(e) || LISTO.equals(e) || MORA.equals(e) || ENTREGADO.equals(e);
+    }
+
+    public static boolean estaCobrada(String estado) {
+        return estado != null && COMPLETADA.equalsIgnoreCase(estado);
     }
 }

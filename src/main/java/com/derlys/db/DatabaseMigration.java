@@ -14,6 +14,8 @@ public final class DatabaseMigration {
         addColumnIfMissing(conn, "usuarios", "telefono", "TEXT");
         backfillUsername(conn);
         createUniqueIndexIfMissing(conn, "idx_usuarios_username", "usuarios", "username");
+        addColumnIfMissing(conn, "lotes", "costo_inicial", "REAL DEFAULT 0");
+        seedTipoCompraLote(conn);
     }
 
     private static void addColumnIfMissing(Connection conn, String table, String column, String type)
@@ -80,6 +82,24 @@ public final class DatabaseMigration {
             try (ResultSet rs = st.executeQuery()) {
                 return rs.next();
             }
+        }
+    }
+
+    private static void seedTipoCompraLote(Connection conn) throws SQLException {
+        try (var st = conn.prepareStatement(
+                "SELECT 1 FROM tipos_movimiento WHERE nombre = 'COMPRA_LOTE'")) {
+            try (ResultSet rs = st.executeQuery()) {
+                if (rs.next()) {
+                    return;
+                }
+            }
+        }
+        try (Statement st = conn.createStatement()) {
+            st.executeUpdate(
+                    """
+                    INSERT INTO tipos_movimiento (nombre, descripcion)
+                    VALUES ('COMPRA_LOTE', 'Compra inicial del lote de pollos')
+                    """);
         }
     }
 }

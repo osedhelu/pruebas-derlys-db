@@ -30,6 +30,11 @@ public class HistorialLoteRepository {
                         FROM asientos_contables ac
                         WHERE ac.transaccion_id = t.id AND ac.cuenta_id IN (3, 5)
                     )
+                    WHEN tm.nombre = 'COMPRA_LOTE' THEN (
+                        SELECT IFNULL(SUM(ac.debe), 0)
+                        FROM asientos_contables ac
+                        WHERE ac.transaccion_id = t.id AND ac.cuenta_id = 7
+                    )
                     WHEN tm.nombre = 'APORTE_CAPITAL' THEN (
                         SELECT IFNULL(SUM(ac.debe), 0)
                         FROM asientos_contables ac

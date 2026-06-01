@@ -94,7 +94,8 @@ INSERT INTO tipos_movimiento (id, nombre, descripcion) VALUES
     (2, 'MUERTE',           'Baja de pollos por mortalidad'),
     (3, 'GASTO_OPERATIVO',  'Compra de insumos: alimento, medicina, etc.'),
     (4, 'INVERSION_ACTIVO', 'Compra de equipos: bebederos, mallas, abanicos'),
-    (5, 'APORTE_CAPITAL',   'Inyección de dinero por parte del dueño');
+    (5, 'APORTE_CAPITAL',   'Inyección de dinero por parte del dueño'),
+    (6, 'COMPRA_LOTE',      'Compra inicial del lote de pollos');
 
 -- -----------------------------------------------------------------------------
 -- 5. Lotes
@@ -106,12 +107,13 @@ CREATE TABLE lotes (
     cantidad_inicial INTEGER NOT NULL CHECK (cantidad_inicial > 0),
     raza             TEXT,
     estado           TEXT DEFAULT 'activo',
-    observaciones    TEXT
+    observaciones    TEXT,
+    costo_inicial    REAL NOT NULL DEFAULT 0 CHECK (costo_inicial >= 0)
 );
 
-INSERT INTO lotes (id, codigo_lote, fecha_entrada, cantidad_inicial, raza, estado, observaciones) VALUES
-    (1, 'LT-001', date('now', '-45 days'), 500, 'Ross 308', 'activo', 'Lote inicial de demostración'),
-    (2, 'LT-002', date('now', '-20 days'), 200, 'Ross 308', 'activo', 'Segundo lote de demostración');
+INSERT INTO lotes (id, codigo_lote, fecha_entrada, cantidad_inicial, raza, estado, observaciones, costo_inicial) VALUES
+    (1, 'LT-001', date('now', '-45 days'), 500, 'Ross 308', 'activo', 'Lote inicial de demostración', 2500000),
+    (2, 'LT-002', date('now', '-20 days'), 200, 'Ross 308', 'activo', 'Segundo lote de demostración', 1200000);
 
 -- -----------------------------------------------------------------------------
 -- 6. Transacciones (movimientos por lote)
@@ -193,7 +195,7 @@ INSERT INTO sqlite_sequence (name, seq) VALUES
     ('roles',            4),
     ('usuarios',         6),
     ('plan_cuentas',     7),
-    ('tipos_movimiento', 5),
+    ('tipos_movimiento', 6),
     ('lotes',            2),
     ('transacciones',    0),
     ('asientos_contables', 0),

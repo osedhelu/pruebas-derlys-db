@@ -10,7 +10,8 @@ public record Lote(
         Integer cantidadInicial,
         String raza,
         String estado,
-        String observaciones) {
+        String observaciones,
+        Double costoInicial) {
 
     public void print() {
         System.out.println("-----------------------------------");
@@ -20,6 +21,7 @@ public record Lote(
         System.out.println("Estado        = " + this.estado());
         System.out.println("Raza          = " + this.raza());
         System.out.println("Cantidad      = " + this.cantidadInicial());
+        System.out.println("Costo inicial = " + this.costoInicial());
     }
 
     // NUEVO MÉTODO: Recibe la lista e imprime cada lote usando el método print() de arriba

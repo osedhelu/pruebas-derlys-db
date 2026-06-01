@@ -84,15 +84,13 @@ public class PreventaRepository {
         }
         String actual = preventa.estado() == null ? "" : preventa.estado().toLowerCase();
 
-        if (PreventaEstados.COMPLETADA.equals(actual) && !PreventaEstados.ENTREGADO.equals(estadoNorm)) {
-            throw new RuntimeException(
-                    "La preventa ya está cobrada. Solo puede pasar a «entregado» o quedar en cobrada.");
-        }
-        if (PreventaEstados.ENTREGADO.equals(actual)) {
-            throw new RuntimeException("La preventa ya está marcada como entregada.");
-        }
-        if (PreventaEstados.COMPLETADA.equals(estadoNorm)) {
-            throw new RuntimeException("Para marcar como cobrada use la pestaña «Cobrar preventa».");
+        if (PreventaEstados.estaCobrada(actual)) {
+            if (!PreventaEstados.ENTREGADO.equals(estadoNorm)) {
+                throw new RuntimeException(
+                        "La preventa ya está cobrada. Solo puede confirmar «entregado» si aún no lo estaba.");
+            }
+        } else if (PreventaEstados.COMPLETADA.equals(estadoNorm)) {
+            throw new RuntimeException("Para registrar el cobro use la pestaña «Cobrar preventa».");
         }
 
         try {
@@ -109,7 +107,7 @@ public class PreventaRepository {
         }
         if (!PreventaEstados.puedeCobrarse(preventa.estado())) {
             throw new RuntimeException(
-                    "Solo se pueden cobrar preventas pendientes, listas o en mora (estado actual: "
+                    "Solo se pueden cobrar preventas que aún no están pagadas (estado actual: "
                             + PreventaEstados.etiqueta(preventa.estado())
                             + ")");
         }

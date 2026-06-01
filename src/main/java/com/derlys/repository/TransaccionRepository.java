@@ -76,6 +76,7 @@ public class TransaccionRepository {
     private static final int CUENTA_GASTO_MEDICINAS = 3;
     private static final int CUENTA_INGRESOS_VENTAS = 4;
     private static final int CUENTA_EQUIPOS = 5;
+    private static final int CUENTA_INVENTARIO_POLLOS = 7;
 
     public void crear(
             int loteId, int usuarioId, String tipoNombre, int tipoMovimientoId, int cantidad, String descripcion,
@@ -143,6 +144,10 @@ public class TransaccionRepository {
             }
             case "INVERSION_ACTIVO" -> {
                 insertarAsiento(transaccionId, CUENTA_EQUIPOS, monto, 0);
+                insertarAsiento(transaccionId, CUENTA_CAJA, 0, monto);
+            }
+            case "COMPRA_LOTE" -> {
+                insertarAsiento(transaccionId, CUENTA_INVENTARIO_POLLOS, monto, 0);
                 insertarAsiento(transaccionId, CUENTA_CAJA, 0, monto);
             }
             default -> { }

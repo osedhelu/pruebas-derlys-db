@@ -1,15 +1,3 @@
--- =============================================================================
--- Granja Derlys — Script completo de base de datos SQLite (desde cero)
--- =============================================================================
--- Uso:
---   sqlite3 datos/pruebas.db < datos/init_database.sql
---   o: make init-db
---
--- Credenciales de prueba (contraseña en texto plano, igual que la app actual):
---   admin  / 1234  (administrador)
---   granja / 1234  (granjero)
---   ventas / 1234  (vendedor)
--- =============================================================================
 
 PRAGMA foreign_keys = ON;
 

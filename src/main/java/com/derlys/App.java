@@ -12,7 +12,7 @@ public class App {
         DatabaseConfig config = DatabaseConfig.load();
         var conn = new DatabaseConnection(config).connect();
         DatabaseMigration.migrate(conn);
-        // No cerrar conn aquí: Swing sigue abierto y el login la necesita después.
+       
         new LoginScreen(conn).setVisible(true);
     }
 }

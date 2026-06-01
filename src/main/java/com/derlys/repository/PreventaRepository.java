@@ -22,7 +22,8 @@ public class PreventaRepository {
     public List<PreventaDetalle> listarDetalle() {
         String sql = """
                 SELECT p.id, u.nombre AS cliente_nombre, u.telefono AS cliente_telefono,
-                       l.codigo_lote, p.cantidad_apartada, p.fecha_apartado, p.estado
+                       l.codigo_lote, p.cantidad_apartada, p.fecha_apartado, p.estado,
+                       p.monto_a_cobrar, p.notas_entrega
                 FROM preventas p
                 INNER JOIN usuarios u ON u.id = p.cliente_id
                 INNER JOIN lotes l ON l.id = p.lote_id
@@ -71,7 +72,7 @@ public class PreventaRepository {
         }
     }
 
-    public void cambiarEstado(int preventaId, String nuevoEstado) {
+    public void cambiarEstado(int preventaId, String nuevoEstado, Double montoACobrar, String notasEntrega) {
         String estadoNorm = nuevoEstado == null ? "" : nuevoEstado.trim().toLowerCase();
         if (!PreventaEstados.MANUALES.contains(estadoNorm)) {
             throw new RuntimeException(
@@ -93,10 +94,40 @@ public class PreventaRepository {
             throw new RuntimeException("Para registrar el cobro use la pestaña «Cobrar preventa».");
         }
 
+        Double monto = null;
+        String notas = null;
+        if (PreventaEstados.ENTREGADO.equals(estadoNorm)) {
+            if (montoACobrar == null || montoACobrar <= 0) {
+                throw new RuntimeException(
+                        "Al marcar como entregado indique cuánto debe pagar el cliente (monto mayor que 0).");
+            }
+            monto = montoACobrar;
+            notas = notasEntrega == null || notasEntrega.isBlank() ? null : notasEntrega.trim();
+        }
+
         try {
-            actualizarEstado(preventaId, estadoNorm);
+            actualizarPreventa(preventaId, estadoNorm, monto, notas);
         } catch (SQLException e) {
             throw new RuntimeException("Error al cambiar estado: " + e.getMessage(), e);
+        }
+    }
+
+    public void actualizarDatosEntrega(int preventaId, double montoACobrar, String notasEntrega) {
+        Preventa preventa = buscarPorId(preventaId);
+        if (preventa == null) {
+            throw new RuntimeException("Preventa no encontrada");
+        }
+        if (!PreventaEstados.ENTREGADO.equalsIgnoreCase(preventa.estado())) {
+            throw new RuntimeException("Solo se puede actualizar el monto en preventas en estado entregado.");
+        }
+        if (montoACobrar <= 0) {
+            throw new RuntimeException("El monto a cobrar debe ser mayor que 0.");
+        }
+        String notas = notasEntrega == null || notasEntrega.isBlank() ? null : notasEntrega.trim();
+        try {
+            actualizarPreventa(preventaId, PreventaEstados.ENTREGADO, montoACobrar, notas);
+        } catch (SQLException e) {
+            throw new RuntimeException("Error al actualizar datos de entrega: " + e.getMessage(), e);
         }
     }
 
@@ -133,7 +164,7 @@ public class PreventaRepository {
                     desc,
                     monto);
 
-            actualizarEstado(preventaId, PreventaEstados.COMPLETADA);
+            actualizarPreventa(preventaId, PreventaEstados.COMPLETADA, null, null);
             connection.commit();
         } catch (SQLException e) {
             try {
@@ -151,11 +182,18 @@ public class PreventaRepository {
         }
     }
 
-    private void actualizarEstado(int preventaId, String estado) throws SQLException {
-        String sql = "UPDATE preventas SET estado = ? WHERE id = ?";
+    private void actualizarPreventa(int preventaId, String estado, Double montoACobrar, String notasEntrega)
+            throws SQLException {
+        String sql = "UPDATE preventas SET estado = ?, monto_a_cobrar = ?, notas_entrega = ? WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, estado);
-            statement.setInt(2, preventaId);
+            if (montoACobrar == null) {
+                statement.setNull(2, java.sql.Types.REAL);
+            } else {
+                statement.setDouble(2, montoACobrar);
+            }
+            statement.setString(3, notasEntrega);
+            statement.setInt(4, preventaId);
             if (statement.executeUpdate() == 0) {
                 throw new SQLException("No se actualizó la preventa");
             }
@@ -172,7 +210,9 @@ public class PreventaRepository {
                 rs.getString("codigo_lote"),
                 rs.getInt("cantidad_apartada"),
                 fecha,
-                rs.getString("estado"));
+                rs.getString("estado"),
+                leerMonto(rs, "monto_a_cobrar"),
+                rs.getString("notas_entrega"));
     }
 
     private Preventa mapPreventa(ResultSet rs) throws SQLException {
@@ -184,6 +224,13 @@ public class PreventaRepository {
                 rs.getInt("lote_id"),
                 rs.getInt("cantidad_apartada"),
                 fecha,
-                rs.getString("estado"));
+                rs.getString("estado"),
+                leerMonto(rs, "monto_a_cobrar"),
+                rs.getString("notas_entrega"));
+    }
+
+    private static Double leerMonto(ResultSet rs, String columna) throws SQLException {
+        double valor = rs.getDouble(columna);
+        return rs.wasNull() ? null : valor;
     }
 }

@@ -164,6 +164,8 @@ CREATE TABLE preventas (
     cantidad_apartada INTEGER NOT NULL CHECK (cantidad_apartada > 0),
     fecha_apartado    DATETIME DEFAULT CURRENT_TIMESTAMP,
     estado            TEXT DEFAULT 'pendiente',
+    monto_a_cobrar    REAL,
+    notas_entrega     TEXT,
     FOREIGN KEY (cliente_id) REFERENCES usuarios(id),
     FOREIGN KEY (lote_id) REFERENCES lotes(id)
 );

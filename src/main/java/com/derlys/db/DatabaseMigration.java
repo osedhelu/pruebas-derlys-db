@@ -16,6 +16,8 @@ public final class DatabaseMigration {
         createUniqueIndexIfMissing(conn, "idx_usuarios_username", "usuarios", "username");
         addColumnIfMissing(conn, "lotes", "costo_inicial", "REAL DEFAULT 0");
         seedTipoCompraLote(conn);
+        addColumnIfMissing(conn, "preventas", "monto_a_cobrar", "REAL");
+        addColumnIfMissing(conn, "preventas", "notas_entrega", "TEXT");
     }
 
     private static void addColumnIfMissing(Connection conn, String table, String column, String type)

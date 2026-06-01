@@ -9,5 +9,7 @@ public record PreventaDetalle(
         String codigoLote,
         Integer cantidadApartada,
         LocalDateTime fechaApartado,
-        String estado) {
+        String estado,
+        Double montoACobrar,
+        String notasEntrega) {
 }

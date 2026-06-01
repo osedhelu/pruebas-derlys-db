@@ -57,6 +57,8 @@ public class VentasScreen extends JFrame {
 
     private JLabel lblPreventaParaEstado;
     private JComboBox<String> comboEstadoPreventa;
+    private JTextField campoMontoEntrega;
+    private JTextField campoNotasEntrega;
     private JButton btnCambiarEstado;
 
     private JComboBox<LoteReporte> comboLoteVenta;
@@ -74,7 +76,7 @@ public class VentasScreen extends JFrame {
         usuarioRepo = new UsuarioRepository(conn);
 
         setTitle("Ventas - " + vendedor.nombre());
-        setSize(920, 620);
+        setSize(980, 640);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -104,7 +106,7 @@ public class VentasScreen extends JFrame {
                 JLabel.CENTER);
         panel.add(instrucciones, BorderLayout.NORTH);
 
-        String[] columnas = {"ID", "Cliente", "Teléfono", "Lote", "Cant.", "Fecha", "Estado"};
+        String[] columnas = {"ID", "Cliente", "Teléfono", "Lote", "Cant.", "A cobrar ($)", "Fecha", "Estado"};
         tablaPreventas = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -197,12 +199,22 @@ public class VentasScreen extends JFrame {
             }
         });
 
-        JPanel formEstado = new JPanel(new GridLayout(1, 2, 10, 10));
-        formEstado.setBorder(new TitledBorder("Nuevo estado"));
+        comboEstadoPreventa.addActionListener(e -> actualizarCamposEntregaVisibles());
+
+        campoMontoEntrega = new JTextField(12);
+        campoNotasEntrega = new JTextField(28);
+        campoNotasEntrega.setToolTipText("Ej: 30 pollos, pesaron 45 kg, $8.500/kg");
+
+        JPanel formEstado = new JPanel(new GridLayout(3, 2, 10, 10));
+        formEstado.setBorder(new TitledBorder("Estado y monto al entregar"));
         formEstado.add(new JLabel("Estado:"));
         formEstado.add(comboEstadoPreventa);
+        formEstado.add(new JLabel("Monto a cobrar ($):"));
+        formEstado.add(campoMontoEntrega);
+        formEstado.add(new JLabel("Notas (peso, detalle):"));
+        formEstado.add(campoNotasEntrega);
 
-        btnCambiarEstado = new JButton("Guardar estado");
+        btnCambiarEstado = new JButton("Guardar estado / monto");
         btnCambiarEstado.setEnabled(false);
         btnCambiarEstado.addActionListener(e -> cambiarEstadoPreventa());
 
@@ -230,11 +242,29 @@ public class VentasScreen extends JFrame {
         return tel;
     }
 
+    private static String formatearMonto(Double monto) {
+        if (monto == null || monto <= 0) {
+            return "—";
+        }
+        if (monto == Math.rint(monto)) {
+            return String.format("$%,.0f", monto);
+        }
+        return String.format("$%,.2f", monto);
+    }
+
+    private void actualizarCamposEntregaVisibles() {
+        String sel = (String) comboEstadoPreventa.getSelectedItem();
+        boolean entregado = PreventaEstados.ENTREGADO.equalsIgnoreCase(sel);
+        campoMontoEntrega.setEnabled(entregado);
+        campoNotasEntrega.setEnabled(entregado);
+    }
+
     private void actualizarInfoPreventaCobro() {
         PreventaDetalle p = preventaSeleccionada();
         if (p == null) {
             lblPreventaParaCobro.setText("↑ Selecciona una fila en la tabla de arriba");
             btnCobrarPreventa.setEnabled(false);
+            campoMontoPreventa.setText("");
             return;
         }
         if (!PreventaEstados.puedeCobrarse(p.estado())) {
@@ -245,9 +275,10 @@ public class VentasScreen extends JFrame {
                     textoTelefono(p),
                     PreventaEstados.etiqueta(p.estado())));
             btnCobrarPreventa.setEnabled(false);
+            campoMontoPreventa.setText("");
             return;
         }
-        lblPreventaParaCobro.setText(String.format(
+        StringBuilder info = new StringBuilder(String.format(
                 "Cobrar #%d | %s | Tel: %s | Lote %s | %d pollos | %s",
                 p.id(),
                 p.clienteNombre(),
@@ -255,6 +286,16 @@ public class VentasScreen extends JFrame {
                 p.codigoLote(),
                 p.cantidadApartada(),
                 PreventaEstados.etiqueta(p.estado())));
+        if (p.montoACobrar() != null && p.montoACobrar() > 0) {
+            info.append("\n→ Monto acordado al entregar: ").append(formatearMonto(p.montoACobrar()));
+            if (p.notasEntrega() != null && !p.notasEntrega().isBlank()) {
+                info.append(" (").append(p.notasEntrega()).append(")");
+            }
+            campoMontoPreventa.setText(String.valueOf(p.montoACobrar()));
+        } else {
+            campoMontoPreventa.setText("");
+        }
+        lblPreventaParaCobro.setText(info.toString());
         btnCobrarPreventa.setEnabled(true);
     }
 
@@ -263,19 +304,44 @@ public class VentasScreen extends JFrame {
         if (p == null) {
             lblPreventaParaEstado.setText("↑ Selecciona una preventa en la tabla");
             btnCambiarEstado.setEnabled(false);
+            campoMontoEntrega.setText("");
+            campoNotasEntrega.setText("");
             return;
         }
         String estado = p.estado() == null ? "" : p.estado().toLowerCase();
-        lblPreventaParaEstado.setText(String.format(
-                "#%d | %s | Tel: %s | Estado actual: %s",
-                p.id(), p.clienteNombre(), textoTelefono(p), PreventaEstados.etiqueta(p.estado())));
+        StringBuilder info = new StringBuilder(String.format(
+                "#%d | %s | Tel: %s | %d pollos | Estado: %s",
+                p.id(), p.clienteNombre(), textoTelefono(p), p.cantidadApartada(),
+                PreventaEstados.etiqueta(p.estado())));
+        if (p.montoACobrar() != null && p.montoACobrar() > 0) {
+            info.append(" | A cobrar: ").append(formatearMonto(p.montoACobrar()));
+        }
+        lblPreventaParaEstado.setText(info.toString());
 
         if (PreventaEstados.estaCobrada(estado)) {
             seleccionarEstadoEnCombo(PreventaEstados.ENTREGADO);
+            campoMontoEntrega.setText("");
+            campoNotasEntrega.setText("");
+            campoMontoEntrega.setEnabled(false);
+            campoNotasEntrega.setEnabled(false);
             btnCambiarEstado.setEnabled(true);
             return;
         }
-        seleccionarEstadoEnCombo(estado);
+
+        if (PreventaEstados.ENTREGADO.equals(estado)) {
+            seleccionarEstadoEnCombo(PreventaEstados.ENTREGADO);
+            if (p.montoACobrar() != null && p.montoACobrar() > 0) {
+                campoMontoEntrega.setText(String.valueOf(p.montoACobrar()));
+            } else {
+                campoMontoEntrega.setText("");
+            }
+            campoNotasEntrega.setText(p.notasEntrega() != null ? p.notasEntrega() : "");
+        } else {
+            seleccionarEstadoEnCombo(estado);
+            campoMontoEntrega.setText("");
+            campoNotasEntrega.setText("");
+        }
+        actualizarCamposEntregaVisibles();
         btnCambiarEstado.setEnabled(true);
     }
 
@@ -302,26 +368,59 @@ public class VentasScreen extends JFrame {
             if (nuevo == null) {
                 return;
             }
+
+            Double montoEntrega = null;
+            String notas = campoNotasEntrega.getText().trim();
+            if (PreventaEstados.ENTREGADO.equalsIgnoreCase(nuevo)) {
+                try {
+                    montoEntrega = Double.parseDouble(campoMontoEntrega.getText().trim());
+                } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(
+                            this,
+                            "Indica cuánto debe pagar el cliente (monto numérico).\n"
+                                    + "Ej: pesaron 45 kg a $8.500 → escribe el total.");
+                    return;
+                }
+                if (montoEntrega <= 0) {
+                    JOptionPane.showMessageDialog(this, "El monto a cobrar debe ser mayor que 0.");
+                    return;
+                }
+            }
+
             if (nuevo.equalsIgnoreCase(p.estado())) {
+                if (PreventaEstados.ENTREGADO.equalsIgnoreCase(nuevo)) {
+                    preventaRepo.actualizarDatosEntrega(p.id(), montoEntrega, notas);
+                    refrescarDatos();
+                    JOptionPane.showMessageDialog(
+                            this,
+                            "Monto a cobrar actualizado: " + formatearMonto(montoEntrega));
+                    return;
+                }
                 JOptionPane.showMessageDialog(this, "La preventa ya tiene ese estado.");
                 return;
             }
 
-            int confirmar = JOptionPane.showConfirmDialog(
-                    this,
-                    "¿Cambiar preventa #" + p.id() + " (" + p.clienteNombre() + ")?\n"
-                            + "De: " + PreventaEstados.etiqueta(p.estado()) + "\n"
-                            + "A: " + PreventaEstados.etiqueta(nuevo),
-                    "Confirmar estado",
-                    JOptionPane.YES_NO_OPTION);
+            String msg = "¿Cambiar preventa #" + p.id() + " (" + p.clienteNombre() + ")?\n"
+                    + "De: " + PreventaEstados.etiqueta(p.estado()) + "\n"
+                    + "A: " + PreventaEstados.etiqueta(nuevo);
+            if (PreventaEstados.ENTREGADO.equalsIgnoreCase(nuevo)) {
+                msg += "\n\nMonto a cobrar: " + formatearMonto(montoEntrega);
+                if (!notas.isBlank()) {
+                    msg += "\nNotas: " + notas;
+                }
+            }
+            int confirmar = JOptionPane.showConfirmDialog(this, msg, "Confirmar", JOptionPane.YES_NO_OPTION);
             if (confirmar != JOptionPane.YES_OPTION) {
                 return;
             }
 
-            preventaRepo.cambiarEstado(p.id(), nuevo);
+            preventaRepo.cambiarEstado(p.id(), nuevo, montoEntrega, notas);
             refrescarDatos();
-            JOptionPane.showMessageDialog(
-                    this, "Estado actualizado a: " + PreventaEstados.etiqueta(nuevo));
+            String ok = "Estado: " + PreventaEstados.etiqueta(nuevo);
+            if (PreventaEstados.ENTREGADO.equalsIgnoreCase(nuevo)) {
+                ok += "\nQuedó registrado a cobrar: " + formatearMonto(montoEntrega);
+            }
+            JOptionPane.showMessageDialog(this, ok);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -456,6 +555,7 @@ public class VentasScreen extends JFrame {
                 tel == null || tel.isBlank() ? "—" : tel,
                 p.codigoLote(),
                 p.cantidadApartada(),
+                formatearMonto(p.montoACobrar()),
                 p.fechaApartado(),
                 PreventaEstados.etiqueta(p.estado())
             });
